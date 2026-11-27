@@ -47,6 +47,8 @@ Cada arquivo `src/features/featureNN.js` exporta `id`, `name`, `description`, `i
 
 Enquanto `implemented` for `false`, a API retorna HTTP 501 para aquele módulo.
 
+
+...
 ## Importante
 Este repositório é entregue intencionalmente sem testes automatizados, análise estática, workflow de CI, build ou configuração de deploy. O estudante deverá criar e justificar esses elementos durante a avaliação.
 
