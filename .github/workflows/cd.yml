@@ -1,0 +1,63 @@
+name: CD (simulado)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  entrega:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_TAG: lab40:feature04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Verificar antes de entregar
+        run: |
+          npm ci
+          npm run lint
+          npm test
+          npm run test:smoke
+
+      - name: Construir imagem Docker
+        run: docker build --pull -t "$IMAGE_TAG" .
+
+      - name: Validar container efêmero
+        run: |
+          docker run -d --name lab40-cd -p 3000:3000 "$IMAGE_TAG"
+          for i in $(seq 1 20); do curl --fail -s http://localhost:3000/health && break || sleep 1; done
+          curl --fail http://localhost:3000/health
+          curl --fail -X POST http://localhost:3000/api/features/4 \
+            -H "Content-Type: application/json" \
+            -d '{"valor":25,"origem":"C","destino":"F"}'
+          docker rm -f lab40-cd
+
+      - name: Gerar pacote de entrega (.tar e registro)
+        run: |
+          mkdir -p delivery
+          docker save "$IMAGE_TAG" -o delivery/lab40-feature04.tar
+          {
+            echo "Entrega simulada (sem deploy real)"
+            echo "repositorio: ${{ github.repository }}"
+            echo "referencia: ${{ github.ref }}"
+            echo "sha: ${{ github.sha }}"
+            echo "tag: $IMAGE_TAG"
+            echo "workflow_run: ${{ github.run_id }}"
+            echo "data_utc: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > delivery/deployment-record.txt
+          cat delivery/deployment-record.txt
+
+      - name: Publicar artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab40-delivery-record
+          path: delivery/
